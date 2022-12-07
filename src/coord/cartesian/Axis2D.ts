@@ -18,14 +18,19 @@
 */
 
 import Axis from '../Axis';
-import { DimensionName, OrdinalSortInfo } from '../../util/types';
+import Model from '../../model/Model';
+import { DimensionName, OrdinalSortInfo, ScaleTick } from '../../util/types';
 import Scale from '../../scale/Scale';
 import CartesianAxisModel, { CartesianAxisPosition } from './AxisModel';
 import Grid from './Grid';
 import { OptionAxisType } from '../axisCommonTypes';
 import OrdinalScale from '../../scale/Ordinal';
 
-
+interface TickCoord {
+    coord: number;
+    // That is `scaleTick.value`.
+    tickValue?: ScaleTick['value'];
+}
 interface Axis2D {
     /**
      * Transform global coord to local coord,
@@ -122,6 +127,31 @@ class Axis2D extends Axis {
 
         this.model.option.categorySortInfo = info;
         (this.scale as OrdinalScale).setSortInfo(info);
+    }
+
+    getSegmentsModel(): Model {
+        return this.model.getSegmentsModel()
+    }
+
+    /**
+     * Different from `zrUtil.map(axis.getTicks(), axis.dataToCoord, axis)`,
+     * `axis.getTicksCoords` considers `onBand`, which is used by
+     * `boundaryGap:true` of category axis and splitLine and splitArea.
+     * @param opt.tickModel default: axis.model.getModel('axisTick')
+     * @param opt.clamp If `true`, the first and the last
+     *        tick must be at the axis end points. Otherwise, clip ticks
+     *        that outside the axis extent.
+     */
+    getTicksCoords(opt?: {
+        tickModel?: Model,
+        clamp?: boolean
+    }): TickCoord[] {
+        return super.getTicksCoords();
+    }
+
+    getMinorTicksCoords(): TickCoord[][] {
+        let minorTicksCoords:TickCoord[][] = super.getMinorTicksCoords()
+        return minorTicksCoords;
     }
 
 }

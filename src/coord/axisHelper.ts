@@ -45,7 +45,9 @@ import SeriesData from '../data/SeriesData';
 import { getStackedDimension } from '../data/helper/dataStackHelper';
 import { Dictionary, DimensionName, ScaleTick, TimeScaleTick } from '../util/types';
 import { ensureScaleRawExtentInfo } from './scaleRawExtentInfo';
-
+import { isFunction } from 'zrender/lib/core/util';
+import TimeSegmentsScale from '../scale/TimeSegments';
+import SegmentsScale from '../scale/Segments';
 
 type BarWidthAndOffset = ReturnType<typeof makeColumnLayout>;
 
@@ -185,6 +187,15 @@ export function niceScaleExtent(
     }
 }
 
+function getSegments(model: AxisBaseModel): Array<any> {
+    let segments = [];
+    if (isFunction(model.getSegmentsModel)) {
+        segments = model.getSegmentsModel().get();
+    }
+    return segments;
+}
+
+
 /**
  * @param axisType Default retrieve from model.type
  */
@@ -201,13 +212,31 @@ export function createScaleByModel(model: AxisBaseModel, axisType?: string): Sca
                     extent: [Infinity, -Infinity]
                 });
             case 'time':
-                return new TimeScale({
-                    locale: model.ecModel.getLocaleModel(),
-                    useUTC: model.ecModel.get('useUTC')
-                });
+                const timeSegments = getSegments(model);
+                if (timeSegments && timeSegments.length > 0) {
+                    return new TimeSegmentsScale({
+                        locale: model.ecModel.getLocaleModel(),
+                        useUTC: model.ecModel.get('useUTC'),
+                        segments: timeSegments
+                    });
+                }
+                else {
+                    return new TimeScale({
+                        locale: model.ecModel.getLocaleModel(),
+                        useUTC: model.ecModel.get('useUTC')
+                    });
+                }
             default:
                 // case 'value'/'interval', 'log', or others.
-                return new (Scale.getClass(axisType) || IntervalScale)();
+
+                const valueSegments = getSegments(model);
+                if (valueSegments && valueSegments.length > 0) {
+                    return new SegmentsScale(valueSegments);
+                }
+                else {
+                    return new (Scale.getClass(axisType) || IntervalScale)();
+                }
+
         }
     }
 }

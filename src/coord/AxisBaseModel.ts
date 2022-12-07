@@ -31,5 +31,7 @@ export interface AxisBaseModel<T extends AxisBaseOptionCommon = AxisBaseOptionCo
     AxisModelCommonMixin<T>,
     AxisModelExtendedInCreator {
 
+    getSegmentsModel?: any;
+
     axis: Axis
 }

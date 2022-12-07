@@ -25,8 +25,23 @@ import Axis2D from './Axis2D';
 import { AxisBaseOption } from '../axisCommonTypes';
 import GridModel from './GridModel';
 import { AxisBaseModel } from '../AxisBaseModel';
-import {OrdinalSortInfo} from '../../util/types';
+import { LineStyleOption, OrdinalSortInfo } from '../../util/types';
 import { SINGLE_REFERRING } from '../../util/model';
+
+interface MinorTickOption {
+    show?: boolean,
+    splitNumber?: number,
+    length?: number,
+    lineStyle?: LineStyleOption
+}
+
+export type Segment = {
+    from:number,
+    to:number,
+    minorTick?:MinorTickOption,
+    length?:number,
+    splitNumber?:number
+}
 
 export type CartesianAxisPosition = 'top' | 'bottom' | 'left' | 'right';
 
@@ -37,6 +52,7 @@ export type CartesianAxisOption = AxisBaseOption & {
     // Offset is for multiple axis on the same position.
     offset?: number;
     categorySortInfo?: OrdinalSortInfo;
+    segments?:Segment[];
 };
 
 export type XAXisOption = CartesianAxisOption & {
@@ -55,6 +71,10 @@ export class CartesianAxisModel extends ComponentModel<CartesianAxisOption>
 
     getCoordSysModel(): GridModel {
         return this.getReferringComponents('grid', SINGLE_REFERRING).models[0] as GridModel;
+    }
+
+    getSegmentsModel(){
+        return this.getModel("segments")
     }
 
 }

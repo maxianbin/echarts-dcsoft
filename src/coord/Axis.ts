@@ -116,20 +116,50 @@ class Axis {
         extent[1] = end;
     }
 
+    updateSegments() {
+        const scale = this.scale as any;
+        const scaleExtend = this.scale.getExtent();
+        if (scaleExtend[0] === Infinity && scaleExtend[1] === -Infinity) {
+            return;
+        }
+        scale.updateSegments(this._extent);
+    }
+
     /**
      * Convert data to coord. Data is the rank if it has an ordinal scale
      */
     dataToCoord(data: ScaleDataValue, clamp?: boolean): number {
         let extent = this._extent;
         const scale = this.scale;
+        const raw = data;
         data = scale.normalize(data);
-
         if (this.onBand && scale.type === 'ordinal') {
             extent = extent.slice() as [number, number];
             fixExtentWithBands(extent, (scale as OrdinalScale).count());
         }
+        if ((scale as any).segments) {
+            const seg = this.getSegmentByValue(null, raw as number, this._extent);
+            if (seg) {
+                const segData = (scale as any).normalizeBySegment(raw as number - seg.from, [0, seg.to - seg.from]);
+                return linearMap(segData, NORMALIZED_EXTENT, seg.extent);
+            }
 
+        }
         return linearMap(data, NORMALIZED_EXTENT, extent, clamp);
+    }
+
+    getSegmentByValue(index: number, val: number, segments?: any, containEnd?: boolean) {
+        segments = (this.scale as any).segments || segments;
+        if (!segments) {
+            return null;
+        }
+        for (let i = 0; i < segments.length; i++) {
+            if (val >= segments[i].from) {
+                if ((i === segments.length - 1 && val <= segments[i].to) || val < segments[i].to) {
+                    return segments[i];
+                }
+            }
+        }
     }
 
     /**

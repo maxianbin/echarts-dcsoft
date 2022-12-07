@@ -219,6 +219,9 @@ class Grid implements CoordinateSystemMaster {
                 const idx = axis.inverse ? 1 : 0;
                 axis.setExtent(extent[idx], extent[1 - idx]);
                 updateAxisTransform(axis, isHorizontal ? gridRect.x : gridRect.y);
+                if ((axis.scale as any).segments) {
+                    axis.updateSegments()
+                }
             });
         }
     }
