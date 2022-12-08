@@ -14,10 +14,15 @@ class SegmentsScale<SETTING extends Dictionary<unknown> = Dictionary<unknown>> e
         this.segments = segments;
     }
 
+
     normalizeBySegment(val: number, extent: [number, number]): number {
+        return helper.normalize(val, extent);
+    }
+
+    scaleSegment(val: number, extent: [number, number]): number {
         extent[0] = 0;
         extent[1] = extent[1] - extent[0];
-        return helper.normalize(val, extent);
+        return helper.scale(val, extent);
     }
 
     updateSegments(axisExtent: [number, number]) {

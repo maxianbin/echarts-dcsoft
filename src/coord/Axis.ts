@@ -30,6 +30,8 @@ import OrdinalScale from '../scale/Ordinal';
 import Model from '../model/Model';
 import { AxisBaseOption, CategoryAxisBaseOption, OptionAxisType } from './axisCommonTypes';
 import { AxisBaseModel } from './AxisBaseModel';
+import Segments from '../scale/Segments';
+
 
 const NORMALIZED_EXTENT = [0, 1] as [number, number];
 
@@ -117,12 +119,12 @@ class Axis {
     }
 
     updateSegments() {
-        const scale = this.scale as any;
+        const scale = this.scale;
         const scaleExtend = this.scale.getExtent();
         if (scaleExtend[0] === Infinity && scaleExtend[1] === -Infinity) {
             return;
         }
-        scale.updateSegments(this._extent);
+        (scale as Segments).updateSegments(this._extent);
     }
 
     /**
@@ -138,9 +140,9 @@ class Axis {
             fixExtentWithBands(extent, (scale as OrdinalScale).count());
         }
         if ((scale as any).segments) {
-            const seg = this.getSegmentByValue(null, raw as number, this._extent);
+            const seg = this.getSegment(null, raw as number, false);
             if (seg) {
-                const segData = (scale as any).normalizeBySegment(raw as number - seg.from, [0, seg.to - seg.from]);
+                const segData = (scale as Segments).normalizeBySegment(raw as number, [seg.from, seg.to]);
                 return linearMap(segData, NORMALIZED_EXTENT, seg.extent);
             }
 
@@ -148,14 +150,18 @@ class Axis {
         return linearMap(data, NORMALIZED_EXTENT, extent, clamp);
     }
 
-    getSegmentByValue(index: number, val: number, segments?: any, containEnd?: boolean) {
+    getSegment(index: number, val: number, backward: boolean = false, segments?: any, containEnd?: boolean) {
         segments = (this.scale as any).segments || segments;
         if (!segments) {
             return null;
         }
+        let min;
+        let max;
         for (let i = 0; i < segments.length; i++) {
-            if (val >= segments[i].from) {
-                if ((i === segments.length - 1 && val <= segments[i].to) || val < segments[i].to) {
+            min = backward !== true ? segments[i].from : segments[i].left;
+            max = backward !== true ? segments[i].to : segments[i].left + segments[i].size;
+            if (val >= min) {
+                if ((i === segments.length - 1 && val <= max) || val < max) {
                     return segments[i];
                 }
             }
@@ -168,12 +174,20 @@ class Axis {
     coordToData(coord: number, clamp?: boolean): number {
         let extent = this._extent;
         const scale = this.scale;
+        const raw = coord;
 
         if (this.onBand && scale.type === 'ordinal') {
             extent = extent.slice() as [number, number];
             fixExtentWithBands(extent, (scale as OrdinalScale).count());
         }
+        if ((scale as any).segments) {
+            const seg = this.getSegment(null, raw as number, true);
+            if (seg) {
+                const t1 = linearMap(coord - seg.from, [0, seg.size], NORMALIZED_EXTENT);
+                return (this.scale as Segments).scaleSegment(t1 as number, [seg.from, seg.to]);
+            }
 
+        }
         const t = linearMap(coord, extent, NORMALIZED_EXTENT, clamp);
 
         return this.scale.scale(t);
