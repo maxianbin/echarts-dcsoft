@@ -3,6 +3,7 @@ import Scale from '../scale/Scale';
 import IntervalScale from './Interval';
 import * as numberUtil from '../util/number';
 import * as helper from './helper';
+import Axis from '../coord/Axis';
 
 const roundNumber = numberUtil.round;
 
@@ -25,9 +26,10 @@ class SegmentsScale<SETTING extends Dictionary<unknown> = Dictionary<unknown>> e
         return helper.scale(val, extent);
     }
 
-    updateSegments(axisExtent: [number, number]) {
+    updateSegments(axisExtent: [number, number], axis: Axis) {
         const axisSize = axisExtent[1] - axisExtent[0];
         const segments = this.segments;
+        const minorTickSplitNumber = axis.model.option.minorTick.splitNumber;
         let splitNumber;
         const extent = this.getExtent();
         const lastSegment = segments[segments.length - 1];
@@ -40,12 +42,40 @@ class SegmentsScale<SETTING extends Dictionary<unknown> = Dictionary<unknown>> e
         }
         let left = 0;
         let tickPixels;
+        let allSplit = 0;
+        let hasLength;
+        for (let i = 0; i < segments.length; i++) {
+            const item = segments[i];
+            allSplit = allSplit + item.splitNumber || 5;
+            if (item.length && item.length > 0) {
+                hasLength = true;
+                break;
+            }
+        }
+        let perSplitSize = 0;
+        let firstSegLen = 0;
+        if (!hasLength) {
+            perSplitSize = axisSize / allSplit;
+            const firstMinorTickNum = segments[0].minorSplitNumber;
+            if (firstMinorTickNum !== minorTickSplitNumber) {
+                const disNum = minorTickSplitNumber - firstMinorTickNum;
+                if (disNum > 0) {
+                    const perMinor = axisSize / ((allSplit - 1) * minorTickSplitNumber + firstMinorTickNum);
+                    perSplitSize = perMinor * minorTickSplitNumber;
+                    firstSegLen = firstMinorTickNum * perMinor;
+                }
+            }
+        }
+        let splitSize;
+        let len;
         for (let i = 0; i < segments.length; i++) {
             segments[i].splitNumber = segments[i].splitNumber || 5;
             segments[i].interval = (segments[i].to - segments[i].from) / segments[i].splitNumber;
             splitNumber = segments[i].splitNumber || (segments[i].to - segments[i].from) / 5;
             tickPixels = segments[i].tickPixels || 5;
-            let segmentSize = segments[i].length ? segments[i].length * axisSize : tickPixels * splitNumber;
+            splitSize = perSplitSize > 0 ? (firstSegLen > 0 ? firstSegLen : perSplitSize) : 0;
+            len = segments[i].length;
+            let segmentSize = splitSize > 0 ? splitSize : len ? len * axisSize : tickPixels * splitNumber;
             segments[i].left = left;
             if (i === segments.length - 1) { // the last
                 segmentSize = axisSize - left;
@@ -96,7 +126,8 @@ class SegmentsScale<SETTING extends Dictionary<unknown> = Dictionary<unknown>> e
             let count = 0;
             const minorTicksGroup = [];
             const interval = segment.interval;
-            const minorInterval = interval / splitNumber;
+            const n = segment.minorSplitNumber ? segment.minorSplitNumber : splitNumber;
+            const minorInterval = interval / n; // segment的interval/axis的minorTick的splitNumber
             while (count < splitNumber - 1) {
                 const minorTick = roundNumber(prevTick.value + (count + 1) * minorInterval);
                 // For the first and last interval. The count may be less than splitNumber.

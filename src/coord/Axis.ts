@@ -124,7 +124,7 @@ class Axis {
         if (scaleExtend[0] === Infinity && scaleExtend[1] === -Infinity) {
             return;
         }
-        (scale as Segments).updateSegments(this._extent);
+        (scale as Segments).updateSegments(this._extent, this);
     }
 
     /**
